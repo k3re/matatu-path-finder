@@ -49,6 +49,7 @@ An intelligent route finder that:
 We built a graph representation of Nairobi's matatu network:
 
 
+```
 Nodes (Stops): 20 major matatu terminals
 ├── Central Area: CBD, Upper Hill
 ├── Westlands Area: Westlands, Kileleshwa, Lavington  
@@ -60,6 +61,7 @@ Nodes (Stops): 20 major matatu terminals
 Edges (Routes): 25 bidirectional connections
 ├── Each edge has: distance (km), travel time (min), route numbers
 └── Example: CBD → Westlands: 4.5 km, 20 min, Routes 24 & 48
+```
 
 
 ### *Data Collection:*
