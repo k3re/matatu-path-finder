@@ -21,8 +21,7 @@ This project applies AI search algorithms (BFS, DFS, and A*) to find optimal mat
 
 
 ### Run in Google Colab:
-[![Open In Colab](https://colab.research.google.com/drive/1IjJPMoZqXKbGF2weLF4NW7KWgdVjktZS?authuser=1#scrollTo=OWuQqYE2w38x)](https://colab.research.google.com/github/k3re/matatu-path-finder/blob/main/notebooks/Project_2.ipynb)
-
+[![Open In Colab](https://colab.research.google.com/github/k3re/matatu-path-finder/blob/main/notebooks/matatu_pathfinder.ipynb)
 ### Run Locally:
 ```bash
 git clone https://github.com/YOUR_USERNAME/matatu-path-finder.git
