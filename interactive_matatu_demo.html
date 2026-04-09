@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nairobi Matatu Network Explorer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1a1a1a;
+        }
+        
+        .header p {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .network-container {
+            background: white;
+            border-radius: 12px;
+            height: 500px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        #network {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .controls-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            height: fit-content;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .control-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+            transition: border-color 0.2s;
+        }
+        
+        select:hover {
+            border-color: #999;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #1976d2;
+            box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+        }
+        
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        button.active {
+            border-color: #1976d2;
+            background: #1976d2;
+            color: white;
+        }
+        
+        .reset-btn {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #ddd;
+        }
+        
+        .results-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        
+        .result-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .result-card.highlighted {
+            border: 2px solid #1976d2;
+            background: #f0f7ff;
+        }
+        
+        .result-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .algo-badge {
+            display: inline-block;
+            padding: 0.4rem 0.85rem;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge-bfs {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        .badge-dfs {
+            background: #ffebee;
+            color: #c62828;
+        }
+        
+        .badge-dijkstra {
+            background: #f1f8e9;
+            color: #33691e;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-label {
+            color: #666;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        
+        .path-display {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: #f5f5f5;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.6;
+            max-height: 120px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Courier New', monospace;
+            word-break: break-word;
+        }
+        
+        .path-display .stop {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            margin: 0.25rem;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-weight: 500;
+        }
+        
+        .no-path {
+            color: #d32f2f;
+            font-style: italic;
+        }
+        
+        .stats-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-top: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .stat-label {
+            font-size: 11px;
+            margin-top: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.9;
+        }
+        
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #1a1a1a;
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: #999;
+            padding: 2rem 0;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ddd;
+            border-top: 2px solid #1976d2;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Nairobi Matatu Network Explorer</h1>
+            <p>Interactive pathfinding demonstration using graph algorithms - BFS, DFS, and Dijkstra</p>
+        </div>
+        
+        <div class="main-grid">
+            <div class="network-container">
+                <div id="network"></div>
+            </div>
+            
+            <div class="controls-panel">
+                <div class="control-group">
+                    <label class="control-label">Starting Stop</label>
+                    <select id="startStop">
+                        <option value="">Select start...</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <label class="control-label">Destination Stop</label>
+                    <select id="endStop">
+                        <option value="">Select destination...</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <button id="bfsBtn">BFS Algorithm</button>
+                    <button id="dfsBtn">DFS Algorithm</button>
+                    <button id="dijkstraBtn">Dijkstra Algorithm</button>
+                    <button class="reset-btn" id="resetBtn">Reset</button>
+                </div>
+            </div>
+        </div>
+        
+        <h2>Algorithm Results</h2>
+        <div class="results-container" id="resultsContainer">
+            <div class="empty-state">
+                <p>Select start and destination stops, then click an algorithm button to find a path.</p>
+            </div>
+        </div>
+        
+        <div class="stats-section">
+            <h2>Network Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="stopCount">14</div>
+                    <div class="stat-label">Total Stops</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="routeCount">20</div>
+                    <div class="stat-label">Total Routes</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgDistance">8.7</div>
+                    <div class="stat-label">Avg Distance (km)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="maxConnections">4</div>
+                    <div class="stat-label">Max Connections</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const networkData = {
+            stops: [
+                'CBD', 'Eastleigh', 'Nairobi West', 'Ronga', 'Ongata Rongai',
+                'USIU', 'Kenyatta University', 'University of Nairobi', 'Kibera',
+                'Langata', 'Parklands', 'Gigiri', 'Upper Hill', 'South C'
+            ],
+            routes: [
+                {from: 'CBD', to: 'Eastleigh', distance: 8},
+                {from: 'CBD', to: 'Nairobi West', distance: 6},
+                {from: 'CBD', to: 'Upper Hill', distance: 3},
+                {from: 'CBD', to: 'South C', distance: 5},
+                {from: 'Eastleigh', to: 'Parklands', distance: 5},
+                {from: 'Eastleigh', to: 'Gigiri', distance: 7},
+                {from: 'Nairobi West', to: 'Kibera', distance: 4},
+                {from: 'Nairobi West', to: 'Langata', distance: 8},
+                {from: 'Nairobi West', to: 'Ronga', distance: 12},
+                {from: 'Langata', to: 'USIU', distance: 6},
+                {from: 'Langata', to: 'Ongata Rongai', distance: 10},
+                {from: 'Upper Hill', to: 'Parklands', distance: 4},
+                {from: 'Upper Hill', to: 'Gigiri', distance: 5},
+                {from: 'South C', to: 'University of Nairobi', distance: 4},
+                {from: 'South C', to: 'Kibera', distance: 5},
+                {from: 'University of Nairobi', to: 'Kenyatta University', distance: 8},
+                {from: 'Kenyatta University', to: 'USIU', distance: 15},
+                {from: 'USIU', to: 'Ongata Rongai', distance: 8},
+                {from: 'Parklands', to: 'Gigiri', distance: 3},
+                {from: 'Ronga', to: 'Ongata Rongai', distance: 5}
+            ]
+        };
+
+        class Graph {
+            constructor(stops) {
+                this.graph = {};
+                stops.forEach(stop => {
+                    this.graph[stop] = [];
+                });
+            }
+
+            addEdge(from, to, distance) {
+                this.graph[from].push({node: to, distance});
+                this.graph[to].push({node: from, distance});
+            }
+
+            bfs(start, end) {
+                if (!this.graph[start] || !this.graph[end]) return [];
+                const visited = new Set();
+                const queue = [[start, [start]]];
+                
+                while (queue.length > 0) {
+                    const [node, path] = queue.shift();
+                    if (node === end) return path;
+                    if (!visited.has(node)) {
+                        visited.add(node);
+                        for (const {node: neighbor} of this.graph[node]) {
+                            if (!visited.has(neighbor)) {
+                                queue.push([neighbor, [...path, neighbor]]);
+                            }
+                        }
+                    }
+                }
+                return [];
+            }
+
+            dfs(start, end, visited = new Set()) {
+                if (start === end) return [start];
+                if (!this.graph[start]) return [];
+                visited.add(start);
+                for (const {node: neighbor} of this.graph[start]) {
+                    if (!visited.has(neighbor)) {
+                        const path = this.dfs(neighbor, end, visited);
+                        if (path.length > 0) return [start, ...path];
+                    }
+                }
+                return [];
+            }
+
+            dijkstra(start, end) {
+                if (!this.graph[start] || !this.graph[end]) return [];
+                const distances = {}, previous = {}, unvisited = new Set();
+                
+                for (const node of Object.keys(this.graph)) {
+                    distances[node] = Infinity;
+                    previous[node] = null;
+                    unvisited.add(node);
+                }
+                distances[start] = 0;
+                
+                while (unvisited.size > 0) {
+                    let current = null, minDist = Infinity;
+                    for (const node of unvisited) {
+                        if (distances[node] < minDist) {
+                            minDist = distances[node];
+                            current = node;
+                        }
+                    }
+                    if (current === null || current === end) break;
+                    unvisited.delete(current);
+                    
+                    for (const {node: neighbor, distance} of this.graph[current]) {
+                        if (unvisited.has(neighbor)) {
+                            const alt = distances[current] + distance;
+                            if (alt < distances[neighbor]) {
+                                distances[neighbor] = alt;
+                                previous[neighbor] = current;
+                            }
+                        }
+                    }
+                }
+                
+                const path = [];
+                let current = end;
+                while (current !== null) {
+                    path.unshift(current);
+                    current = previous[current];
+                }
+                return path[0] === start ? path : [];
+            }
+        }
+
+        const graph = new Graph(networkData.stops);
+        networkData.routes.forEach(route => {
+            graph.addEdge(route.from, route.to, route.distance);
+        });
+
+        function calculateDistance(path) {
+            let total = 0;
+            for (let i = 0; i < path.length - 1; i++) {
+                const edge = graph.graph[path[i]].find(e => e.node === path[i+1]);
+                if (edge) total += edge.distance;
+            }
+            return total;
+        }
+
+        const nodes = new vis.DataSet(networkData.stops.map((stop, i) => ({
+            id: stop, label: stop, title: stop, shape: 'circle',
+            font: {size: 14, color: '#1a1a1a'},
+            color: {background: '#e3f2fd', border: '#1976d2', highlight: {background: '#1976d2', border: '#1976d2'}}
+        })));
+
+        const edges = new vis.DataSet(networkData.routes.map(route => ({
+            from: route.from, to: route.to, label: route.distance + ' km',
+            font: {size: 11, color: '#666'},
+            color: {color: 'rgba(0,0,0,0.2)', highlight: 'rgba(0,0,0,0.4)'}
+        })));
+
+        const network = new vis.Network(document.getElementById('network'), {nodes, edges}, {
+            physics: {enabled: true, barnesHut: {gravitationalConstant: -15000}},
+            interaction: {navigationButtons: true, keyboard: true}
+        });
+
+        const startSelect = document.getElementById('startStop');
+        const endSelect = document.getElementById('endStop');
+        networkData.stops.forEach(stop => {
+            startSelect.innerHTML += `<option value="${stop}">${stop}</option>`;
+            endSelect.innerHTML += `<option value="${stop}">${stop}</option>`;
+        });
+
+        let results = {};
+        const algorithmColors = {bfs: '#1976d2', dfs: '#d32f2f', dijkstra: '#388e3c'};
+
+        document.getElementById('bfsBtn').addEventListener('click', () => runAlgorithm('bfs'));
+        document.getElementById('dfsBtn').addEventListener('click', () => runAlgorithm('dfs'));
+        document.getElementById('dijkstraBtn').addEventListener('click', () => runAlgorithm('dijkstra'));
+
+        function runAlgorithm(algo) {
+            const start = startSelect.value;
+            const end = endSelect.value;
+            if (!start || !end || start === end) {
+                alert('Please select different start and destination stops');
+                return;
+            }
+            let path = [];
+            if (algo === 'bfs') path = graph.bfs(start, end);
+            else if (algo === 'dfs') path = graph.dfs(start, end);
+            else if (algo === 'dijkstra') path = graph.dijkstra(start, end);
+            
+            results[algo] = {path, distance: path.length > 0 ? calculateDistance(path) : 0};
+            highlightPath(path, algo);
+            displayResults();
+        }
+
+        function highlightPath(path, algo) {
+            const highlightEdges = [];
+            for (let i = 0; i < path.length - 1; i++) {
+                highlightEdges.push({from: path[i], to: path[i+1]});
+            }
+            
+            const edgeUpdates = [];
+            networkData.routes.forEach(route => {
+                const isHighlighted = highlightEdges.some(e => 
+                    (e.from === route.from && e.to === route.to) ||
+                    (e.from === route.to && e.to === route.from)
+                );
+                edgeUpdates.push({
+                    from: route.from, to: route.to,
+                    color: isHighlighted ? {color: algorithmColors[algo], width: 3} : {color: 'rgba(0,0,0,0.2)'},
+                    width: isHighlighted ? 3 : 1
+                });
+            });
+            edges.update(edgeUpdates);
+        }
+
+        function displayResults() {
+            const container = document.getElementById('resultsContainer');
+            const algorithms = ['bfs', 'dfs', 'dijkstra'];
+            const algorithmNames = {bfs: 'BFS', dfs: 'DFS', dijkstra: 'Dijkstra'};
+            const badgeClasses = {bfs: 'badge-bfs', dfs: 'badge-dfs', dijkstra: 'badge-dijkstra'};
+
+            let html = '';
+            algorithms.forEach(algo => {
+                const result = results[algo];
+                const hasResult = result && result.path.length > 0;
+                const distance = hasResult ? (Math.round(result.distance * 100) / 100).toFixed(2) : 'N/A';
+                const stops = hasResult ? result.path.length : 'N/A';
+
+                html += `
+                    <div class="result-card ${hasResult ? 'highlighted' : ''}">
+                        <div class="result-header">
+                            <span class="algo-badge ${badgeClasses[algo]}">${algorithmNames[algo]}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Total Distance:</span>
+                            <span class="metric-value">${distance} km</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Number of Stops:</span>
+                            <span class="metric-value">${stops}</span>
+                        </div>
+                        <div class="path-display">
+                            ${hasResult ? 
+                                result.path.map(stop => `<span class="stop">${stop}</span>`).join('') + 
+                                `<div style="margin-top: 0.5rem; font-size: 11px; color: #999;">Total: ${result.path.length} stops</div>` :
+                                '<span class="no-path">No path found</span>'
+                            }
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            startSelect.value = '';
+            endSelect.value = '';
+            results = {};
+            document.getElementById('resultsContainer').innerHTML = '<div class="empty-state"><p>Select start and destination stops, then click an algorithm button to find a path.</p></div>';
+            edges.forEach(edge => {
+                edges.update({from: edge.from, to: edge.to, color: {color: 'rgba(0,0,0,0.2)'}, width: 1});
+            });
+        });
+    </script>
+</body>
+</html>
